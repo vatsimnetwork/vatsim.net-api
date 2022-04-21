@@ -34,16 +34,19 @@ app.listen(port, host, () => console.log(`Server listening on port ${port}!`));
 
 async function AircraftResponse(req: any, res: any) {
   const data = await GetAircraft();
+  res.set('Cache-Control', 'public, max-age=600');
   res.json(data);
 }
 
 async function EventsResponse(req: any, res: any) {
   const data = await GetEvents();
+  res.set('Cache-Control', 'public, max-age=600');
   res.json(data);
 }
 
 async function NetworkStatusResponse(req: any, res: any) {
   const data = await GetStatusData();
+  res.set('Cache-Control', 'public, max-age=600');
   res.json(data);
 }
 
