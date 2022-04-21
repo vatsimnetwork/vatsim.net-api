@@ -1,14 +1,15 @@
 class NetworkStatus {
-    private indicator: string;
-    private description: string;
+	private indicator: string;
 
-    public setIndicator(indicator: string) {
-        this.indicator = indicator;
-    }
+	private description: string;
 
-    public setDescription(description: string) {
-        this.description = description;
-    }
+	public setIndicator(indicator: string) {
+		this.indicator = indicator;
+	}
+
+	public setDescription(description: string) {
+		this.description = description;
+	}
 }
 
 export default NetworkStatus;

@@ -1,6 +1,6 @@
 interface NetworkStatus {
-    indicator: string;
-    description: string;
+	indicator: string;
+	description: string;
 }
 
 export default NetworkStatus;
