@@ -46,7 +46,7 @@ async function EventsResponse(req: any, res: any) {
 
 async function NetworkStatusResponse(req: any, res: any) {
   const data = await GetStatusData();
-  res.set('Cache-Control', 'public, max-age=600');
+  res.set('Cache-Control', 'public, max-age=60');
   res.json(data);
 }
 
