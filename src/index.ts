@@ -4,9 +4,9 @@ import axios from 'axios';
 import NetworkStatus from './classes/NetworkStatus';
 import Pilot from './classes/Pilot';
 import VatsimEvent from './classes/Event';
-import Airport from './classes/Pilot/airport';
+import Airport from './classes/Airport';
 import { db } from './services/Database';
-import Route from './classes/Event/route';
+import Route from './classes/Route';
 import DataFeedPilot from './interfaces/DataFeedPilot';
 import { MyVatsimEvent } from './interfaces/MyVatsimEvents';
 
