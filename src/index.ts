@@ -1,14 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
-import NetworkStatus from './classes/NetworkStatus';
-import Pilot from './classes/Pilot';
-import VatsimEvent from './classes/Event';
-import Airport from './classes/Pilot/airport';
+import NetworkStatus from './types/NetworkStatus.type';
+import Pilot from './types/Pilot.type';
+import VatsimEvent from './types/Event.type';
+import Airport from './types/Airport.type';
 import { db } from './services/Database';
-import Route from './classes/Event/route';
 import DataFeedPilot from './interfaces/DataFeedPilot';
 import { MyVatsimEvent } from './interfaces/MyVatsimEvents';
+import Route from './types/Route.type';
 
 const app = express();
 app.use(cors(
@@ -91,7 +91,7 @@ async function GetAircraft() {
 	return data;
 }
 
-async function GetEvents() {
+async function GetEvents(): Promise<VatsimEvent[]> {
 	let events: VatsimEvent[] = [];
 	await axios.get('https://my.vatsim.net/api/v1/events/all').then(async (resp) => {
 		let networkEvents: MyVatsimEvent[] = [];
@@ -102,33 +102,45 @@ async function GetEvents() {
 		const forLoop = async () => {
 			for (const networkEvent of networkEvents) {
 				if (networkEvent.airports.length > 0 && networkEvent.type === 'Event') {
-					const event = new VatsimEvent();
-					event.id = networkEvent.id;
-					event.name = networkEvent.name;
-					event.startTime = networkEvent.start_time;
-					event.endTime = networkEvent.end_time;
-					event.shortDescription = networkEvent.short_description;
-					event.description = networkEvent.description;
-					event.bannerLink = networkEvent.banner;
+					const { 
+						id, 
+						name, 
+						start_time: startTime, 
+						end_time: endTime, 
+						short_description: shortDescription, 
+						description, 
+						banner: bannerLink,
+					} = networkEvent;
 
-					event.airports = [];
+					const airports = [];
 					for (const networkEventAirport of networkEvent.airports) {
 						const airport = await GetAirportData(networkEventAirport.icao.toUpperCase());
 						if (airport) {
-							event.airports.push(airport);
+							airports.push(airport);
 						}
 					}
 
-					event.routes = [];
+					const routes = [];
 					for (const networkEventRoute of networkEvent.routes) {
-						const route = new Route();
-						route.dep = networkEventRoute.departure;
-						route.arr = networkEventRoute.arrival;
-						route.route = networkEventRoute.route;
-						event.routes.push(route);
+						const { departure: dep, arrival: arr, route } = networkEventRoute;
+						routes.push({
+							dep,
+							arr,
+							route
+						});
 					}
 
-					events.push(event);
+					events.push({
+						id, 
+						name, 
+						startTime, 
+						endTime, 
+						shortDescription, 
+						description, 
+						bannerLink,
+						airports,
+						routes
+					});
 				}
 			}
 		};
@@ -140,36 +152,49 @@ async function GetEvents() {
 	return events;
 }
 
-async function GetStatusData() {
-	const networkStatus: NetworkStatus = new NetworkStatus();
+async function GetStatusData(): Promise<NetworkStatus> {
 	try {
 		await axios.get('https://network-status.vatsim.net/api/v2/status.json').then((resp) => {
 			const response = resp.data;
-			networkStatus.setIndicator(response.status.indicator);
-			networkStatus.setDescription(response.status.description);
+			const { status: { description, indicator }} = response;
+			return {
+				indicator,
+				description
+			}
 		});
 	} catch {
-		networkStatus.setIndicator('none');
-		networkStatus.setDescription('All Systems Operational');
+		return {
+			indicator: 'none',
+			description: 'All Systems Operational'
+		}
 	}
-
-	return networkStatus;
 }
 
-async function ComputeFlightMapData(pilot: DataFeedPilot) {
+async function ComputeFlightMapData(pilot: DataFeedPilot): Promise<Pilot> {
 	const dep = await GetAirportData(pilot.flight_plan.departure.toUpperCase());
 	const arr = await GetAirportData(pilot.flight_plan.arrival.toUpperCase());
-
+	
 	if (dep && arr) {
-		const fmd = new Pilot();
-		fmd.callsign = pilot.callsign;
-		fmd.aircraft = pilot.flight_plan.aircraft_short;
-		fmd.logontime = pilot.logon_time;
-		fmd.dep = dep;
-		fmd.arr = arr;
-		fmd.distance = GreatCircleDistance(dep.lat, dep.lon, arr.lat, arr.lon);
+		const { 
+			callsign,
+			flight_plan,
+			logon_time: logontime
+		} = pilot;
 
-		return fmd;
+		const {
+			aircraft_short: aircraft
+		} = flight_plan;
+
+		const distance = GreatCircleDistance(dep.lat, dep.lon, arr.lat, arr.lon);
+
+		return {
+			callsign,
+			aircraft,
+			logontime,
+			dep,
+			arr,
+			distance
+		};
 	}
 	return null;
 }
@@ -178,14 +203,14 @@ async function GetAirportData(icao: string) : Promise<Airport> {
   const [results] = await db.promise().query('SELECT * FROM `airports` WHERE `icao` = ? limit 0, 1', [icao]);
   const rows: any = results;
   if (rows.length === 1) {
-    const row = rows[0];
-    const airport = new Airport();
-    airport.icao = icao;
-    airport.lat = row.lat;
-		airport.lon = row.lon;
-		return airport;
-	}
-	return null;
+    const { lat, lon } = rows[0];
+	return {
+		icao,
+		lat,
+		lon
+	};
+  }
+  return null;
 }
 
 function GreatCircleDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
