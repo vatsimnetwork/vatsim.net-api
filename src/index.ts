@@ -9,6 +9,10 @@ import { db } from './services/Database';
 import Route from './classes/Event/route';
 import DataFeedPilot from './interfaces/DataFeedPilot';
 import { MyVatsimEvent } from './interfaces/MyVatsimEvents';
+import setCacheControl from './utils/setCacheControl';
+import shuffleMapPilots from './utils/shuffleMapPilots';
+import degreesToRadians from './utils/degreesToRadians';
+import greatCircleDistance from './utils/greatCircleDistance';
 
 const app = express();
 app.use(cors(
@@ -36,19 +40,19 @@ app.listen(port, host, () => console.log(`Server listening on port ${port}!`));
 
 async function AircraftResponse(req: express.Request, res: express.Response) {
 	const data = await GetAircraft();
-	res.set('Cache-Control', 'public, max-age=600');
+	setCacheControl(res);
 	res.json(data);
 }
 
 async function EventsResponse(req: express.Request, res: express.Response) {
 	const data = await GetEvents();
-	res.set('Cache-Control', 'public, max-age=600');
+	setCacheControl(res);
 	res.json(data);
 }
 
 async function NetworkStatusResponse(req: express.Request, res: express.Response) {
 	const data = await GetStatusData();
-	res.set('Cache-Control', 'public, max-age=60');
+	setCacheControl(res, 60);
 	res.json(data);
 }
 
@@ -83,8 +87,8 @@ async function GetAircraft() {
 
 		let busyRegions = flightMapPilots.filter((pilot: Pilot) => !prefixesBusyRegions.includes(pilot.dep.icao.substring(0, 1)));
 
-		nonBusyRegions = ShuffleMapPilots(nonBusyRegions).slice(0, 50);
-		busyRegions = ShuffleMapPilots(busyRegions).slice(0, 100 - nonBusyRegions.length);
+		nonBusyRegions = shuffleMapPilots(nonBusyRegions).slice(0, 50);
+		busyRegions = shuffleMapPilots(busyRegions).slice(0, 100 - nonBusyRegions.length);
 
 		data = data.concat(busyRegions, nonBusyRegions);
 	});
@@ -167,7 +171,7 @@ async function ComputeFlightMapData(pilot: DataFeedPilot) {
 		fmd.logontime = pilot.logon_time;
 		fmd.dep = dep;
 		fmd.arr = arr;
-		fmd.distance = GreatCircleDistance(dep.lat, dep.lon, arr.lat, arr.lon);
+		fmd.distance = greatCircleDistance(dep.lat, dep.lon, arr.lat, arr.lon);
 
 		return fmd;
 	}
@@ -182,37 +186,11 @@ async function GetAirportData(icao: string) : Promise<Airport> {
     const airport = new Airport();
     airport.icao = icao;
     airport.lat = row.lat;
-		airport.lon = row.lon;
-		return airport;
-	}
-	return null;
+	airport.lon = row.lon;
+	return airport;
+  }
+  return null;
 }
 
-function GreatCircleDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
-	const radius = 6371; // Radius of the Earth in km.
-	lat1 = DegreesToRadians(lat1);
-	lon1 = DegreesToRadians(lon1);
-	lat2 = DegreesToRadians(lat2);
-	lon2 = DegreesToRadians(lon2);
 
-	const lat = lat2 - lat1;
-	const lon = lon2 - lon1;
 
-	const h = Math.sin(lat / 2) * Math.sin(lat / 2)
-          + Math.cos(lat1) * Math.cos(lat2)
-          * Math.sin(lon / 2) * Math.sin(lon / 2);
-
-	return 2 * radius * Math.asin(Math.sqrt(h));
-}
-
-function DegreesToRadians(degrees: number) {
-	return degrees * Math.PI / 180.0;
-}
-
-function ShuffleMapPilots(a: Pilot[]) {
-	for (let i = a.length - 1; i > 0; i--) {
-		const j = Math.floor(Math.random() * (i + 1));
-		[a[i], a[j]] = [a[j], a[i]];
-	}
-	return a;
-}
