@@ -9,6 +9,7 @@ import { db } from './services/Database';
 import Route from './classes/Event/route';
 import DataFeedPilot from './interfaces/DataFeedPilot';
 import { MyVatsimEvent } from './interfaces/MyVatsimEvents';
+import setCacheControl from './utils/setCacheControl';
 
 const app = express();
 app.use(cors(
@@ -36,19 +37,19 @@ app.listen(port, host, () => console.log(`Server listening on port ${port}!`));
 
 async function AircraftResponse(req: express.Request, res: express.Response) {
 	const data = await GetAircraft();
-	res.set('Cache-Control', 'public, max-age=600');
+	setCacheControl(res);
 	res.json(data);
 }
 
 async function EventsResponse(req: express.Request, res: express.Response) {
 	const data = await GetEvents();
-	res.set('Cache-Control', 'public, max-age=600');
+	setCacheControl(res);
 	res.json(data);
 }
 
 async function NetworkStatusResponse(req: express.Request, res: express.Response) {
 	const data = await GetStatusData();
-	res.set('Cache-Control', 'public, max-age=60');
+	setCacheControl(res, 60);
 	res.json(data);
 }
 
