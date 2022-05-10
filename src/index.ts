@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import NetworkStatus from './classes/NetworkStatus';
@@ -23,7 +23,7 @@ app.use(cors(
 const host = '0.0.0.0';
 const port = 3333;
 
-app.get('/', async (req: express.Request, res: express.Response) => {
+app.get('/', async (req: Request, res: Response) => {
 	res.send('VATSIM Website API Index');
 });
 
@@ -34,19 +34,19 @@ app.get('/network-status', NetworkStatusResponse);
 // tslint:disable-next-line:no-console
 app.listen(port, host, () => console.log(`Server listening on port ${port}!`));
 
-async function AircraftResponse(req: express.Request, res: express.Response) {
+async function AircraftResponse(req: Request, res: Response) {
 	const data = await GetAircraft();
 	res.set('Cache-Control', 'public, max-age=600');
 	res.json(data);
 }
 
-async function EventsResponse(req: express.Request, res: express.Response) {
+async function EventsResponse(req: Request, res: Response) {
 	const data = await GetEvents();
 	res.set('Cache-Control', 'public, max-age=600');
 	res.json(data);
 }
 
-async function NetworkStatusResponse(req: express.Request, res: express.Response) {
+async function NetworkStatusResponse(req: Request, res: Response) {
 	const data = await GetStatusData();
 	res.set('Cache-Control', 'public, max-age=60');
 	res.json(data);
